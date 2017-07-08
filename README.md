@@ -1,6 +1,6 @@
 # Fuzzy Logic Controllers for ROS
 
-If you are using this controllers within the research for your publication, please cite:
+If you are using these controllers within the research for your publications, please cite:
 
 ```bibtex
 @INPROCEEDINGS{Sarabakha2017FUZZIEEE, 

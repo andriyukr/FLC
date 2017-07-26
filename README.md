@@ -1,6 +1,6 @@
 # Fuzzy Logic Controllers for ROS
 
-This is a repository for a ROS package containing different fuzzy logic controllers.
+This is a repository for ROS package containing different fuzzy logic controllers.
 
 UPD. Currently we are updating our controllers.
 

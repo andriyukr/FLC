@@ -61,13 +61,12 @@ double alpha_d;
 
 bool new_odometry;
 
-class SIT2FLC{
+class SI_IT2_FLC_FM{
         public:
-          SIT2FLC(int, char**);
-          ~SIT2FLC();
+          SI_IT2_FLC_FM(int, char**);
+          ~SI_IT2_FLC_FM();
           void run();
 
         private:
           double T2(double x1, double m);
-          Vector3d beta(double x, Matrix3d& d);
 };

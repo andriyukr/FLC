@@ -3,9 +3,10 @@
 void odometryCallback(const nav_msgs::OdometryConstPtr& odometry_msg){
     tf::Quaternion q(odometry_msg->pose.pose.orientation.x, odometry_msg->pose.pose.orientation.y, odometry_msg->pose.pose.orientation.z, odometry_msg->pose.pose.orientation.w);
     tf::Matrix3x3 m(q);
-    double x, y, z;
-    m.getEulerZYX(z, y, x);
-    pose << odometry_msg->pose.pose.position.x, odometry_msg->pose.pose.position.y, odometry_msg->pose.pose.position.z, z;
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    pose << odometry_msg->pose.pose.position.x, odometry_msg->pose.pose.position.y, odometry_msg->pose.pose.position.z, yaw;
+    orientation << roll, pitch, yaw;
     velocity << odometry_msg->twist.twist.linear.x, odometry_msg->twist.twist.linear.y, odometry_msg->twist.twist.linear.z, odometry_msg->twist.twist.angular.z;
     //cout << "[PID] yaw = " << (180 * z / M_PI) << endl;
 
@@ -23,10 +24,23 @@ void trajectoryVelocityCallback(const QuaternionStamped& velocity_msg){
 }
 
 void dynamicReconfigureCallback(controllers::setPIDConfig &config, uint32_t level){
-    k_p = config.k_p;
-    k_i = config.k_i;
-    k_d = config.k_d;
+    k_p_xy = config.k_p_xy;
+    k_i_xy = config.k_i_xy;
+    k_d_xy = config.k_d_xy;
+    k_p_z = config.k_p_z;
+    k_i_z = config.k_i_z;
+    k_d_z = config.k_d_z;
+    k_p_yaw = config.k_p_yaw;
 }
+
+/*void dynamicReconfigureCallback(controllers::setPIDsimpleConfig &config, uint32_t level){
+    k_p_xy = config.k_p;
+    k_i_xy = config.k_i;
+    k_d_xy = config.k_d;
+    k_p_z = config.k_p;
+    k_i_z = config.k_i;
+    k_d_z = config.k_d;
+}*/
 
 // Constructor
 PID::PID(int argc, char** argv){
@@ -41,18 +55,27 @@ PID::PID(int argc, char** argv){
 
     pose << 0, 0, 0, 0;
     pose_d << 0, 0, 0, 0;
+    orientation << 0, 0, 0;
     velocity << 0, 0, 0, 0;
     velocity_d << 0, 0, 0, 0;
 
-    if(argc > 1){
-        k_p = atof(argv[1]);
-        k_i = atof(argv[2]);
-        k_d = atof(argv[3]);
+    if(argc == 8){
+        k_p_xy = atof(argv[1]);
+        k_i_xy = atof(argv[2]);
+        k_d_xy = atof(argv[3]);
+        k_p_z = atof(argv[4]);
+        k_i_z = atof(argv[5]);
+        k_d_z = atof(argv[6]);
+        k_p_yaw = atof(argv[7]);
     }
     else{
-        k_p = 1.0;
-        k_i = 0.1;
-        k_d = 0.004;
+        k_p_xy = 2.0;
+        k_i_xy = 0.1;
+        k_d_xy = 0.6;
+        k_p_z = 2.0;
+        k_i_z = 0.1;
+        k_d_z = 0.6;
+        k_p_yaw = 2.0;
     }
 
     error_i << 0, 0, 0, 0;
@@ -79,6 +102,8 @@ double PID::denormalizeAngle(double a1, double a2){
 void PID::run(){
     dynamic_reconfigure::Server<controllers::setPIDConfig> server;
     dynamic_reconfigure::Server<controllers::setPIDConfig>::CallbackType f;
+    /*dynamic_reconfigure::Server<controllers::setPIDsimpleConfig> server;
+    dynamic_reconfigure::Server<controllers::setPIDsimpleConfig>::CallbackType f;*/
     f = boost::bind(&dynamicReconfigureCallback, _1, _2);
     server.setCallback(f);
 
@@ -94,6 +119,7 @@ void PID::run(){
 
         if(pose_d(2) > -10 && new_odometry){ // command
             pose(3) = denormalizeAngle(pose(3), pose_d(3));
+            //cout << "[PID] orientation =" << orientation.transpose() / M_PI * 180 << endl;
 
             //ros::Time begin = ros::Time::now();
 
@@ -102,10 +128,12 @@ void PID::run(){
             error_i += error * dt;
             error_d = velocity_d - velocity;
 
-            velocity_msg.x = k_p * error(0) + k_i * error_i(0) + k_d * error_d(0);
-            velocity_msg.y = k_p * error(1) + k_i * error_i(1) + k_d * error_d(1);
-            velocity_msg.z = k_p * error(2) + k_i * error_i(2) + k_d * error_d(2);
-            velocity_msg.w = 0; //k_p * error(3);
+            velocity_msg.x = k_p_xy * error(0) + k_i_xy * error_i(0) + k_d_xy * error_d(0);
+            velocity_msg.y = k_p_xy * error(1) + k_i_xy * error_i(1) + k_d_xy * error_d(1);
+            velocity_msg.z = k_p_z * error(2) + k_i_z * error_i(2) + k_d_z * error_d(2);
+            velocity_msg.w = k_p_yaw * error(3);
+
+            //cout << "[PID] yaw_d = " << pose_d(3) / M_PI * 180 << ",\t yaw = " << pose(3) / M_PI * 180 << ",\t e_yaw = " << error(3) << ",\t r = " << velocity_msg.w << endl;
 
             //time += (ros::Time::now() - begin).toSec() * 1000;
             //c++;

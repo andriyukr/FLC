@@ -1,4 +1,4 @@
-#include "controllers/SI-IT2-FLC.h"
+#include "controllers/SI-IT2-FLC-FM.h"
 
 void odometryCallback(const nav_msgs::OdometryConstPtr& odometry_msg){
     tf::Quaternion q(odometry_msg->pose.pose.orientation.x, odometry_msg->pose.pose.orientation.y, odometry_msg->pose.pose.orientation.z, odometry_msg->pose.pose.orientation.w);
@@ -7,19 +7,19 @@ void odometryCallback(const nav_msgs::OdometryConstPtr& odometry_msg){
     m.getEulerZYX(z, y, x);
     pose << odometry_msg->pose.pose.position.x, odometry_msg->pose.pose.position.y, odometry_msg->pose.pose.position.z, z;
     velocity << odometry_msg->twist.twist.linear.x, odometry_msg->twist.twist.linear.y, odometry_msg->twist.twist.linear.z, odometry_msg->twist.twist.angular.z;
-    //cout << "[SI_IT2_FLC] yaw = " << (180 * z / M_PI) << endl;
+    //cout << "[SI_IT2_FLC_FM] yaw = " << (180 * z / M_PI) << endl;
 
     new_odometry = true;
 }
 
 void trajectoryCallback(const QuaternionStamped& trajectory_msg){
     pose_d << trajectory_msg.quaternion.x, trajectory_msg.quaternion.y, trajectory_msg.quaternion.z, trajectory_msg.quaternion.w;
-    //cout << "[SI_IT2_FLC] position: " << pose_d.transpose() << endl;
+    //cout << "[SI_IT2_FLC_FM] position: " << pose_d.transpose() << endl;
 }
 
 void trajectoryVelocityCallback(const QuaternionStamped& velocity_msg){
     velocity_d << velocity_msg.quaternion.x, velocity_msg.quaternion.y, velocity_msg.quaternion.z, velocity_msg.quaternion.w;
-    //cout << "[SI_IT2_FLC] velocity_d: " << velocity_d.transpose() << endl;
+    //cout << "[SI_IT2_FLC_FM] velocity_d: " << velocity_d.transpose() << endl;
 }
 
 void dynamicReconfigureCallback(controllers::setSIT2FLCConfig &config, uint32_t level){
@@ -33,8 +33,8 @@ void dynamicReconfigureCallback(controllers::setSIT2FLCConfig &config, uint32_t 
 }
 
 // Constructor
-SIT2FLC::SIT2FLC(int argc, char** argv){
-    ros::init(argc, argv, "SI_T2_FPID");
+SI_IT2_FLC_FM::SI_IT2_FLC_FM(int argc, char** argv){
+    ros::init(argc, argv, "SI_IT2_FLC_FM");
     ros::NodeHandle node_handle;
 
     odometry_subscriber = node_handle.subscribe("/uav/odometry", 1, odometryCallback);
@@ -75,12 +75,12 @@ SIT2FLC::SIT2FLC(int argc, char** argv){
 }
 
 // Destructor
-SIT2FLC::~SIT2FLC(){
+SI_IT2_FLC_FM::~SI_IT2_FLC_FM(){
     ros::shutdown();
     exit(0);
 }
 
-void SIT2FLC::run(){
+void SI_IT2_FLC_FM::run(){
     dynamic_reconfigure::Server<controllers::setSIT2FLCConfig> server;
     dynamic_reconfigure::Server<controllers::setSIT2FLCConfig>::CallbackType f;
     f = boost::bind(&dynamicReconfigureCallback, _1, _2);
@@ -121,7 +121,7 @@ void SIT2FLC::run(){
             velocity_publisher.publish(velocity_msg);
 
 
-            //cout << "[SI_IT2_FLC]: c = " << c << " -> " << (time/c) << endl;
+            //cout << "[SI_IT2_FLC_FM]: c = " << c << " -> " << (time/c) << endl;
         }
 
         new_odometry = false;
@@ -129,73 +129,16 @@ void SIT2FLC::run(){
     }
 }
 
-double SIT2FLC::T2(double x1, double m){
-    double m3 = 1 - m;
-    double m2 = m;
-    double m1 = 1 - m;
-    Matrix3d d1;
-    d1 << -3.5, -1, 0, -1, 0, 1, 0, 1, 3.5;
-    Vector3d cup1;
-    cup1 << -1, 0, 1;
-    Vector3d aitu;
-    aitu = beta(x1, d1);
-    Vector3d aitl;
-    aitl << aitu(0) * m1, aitu(1) * m2, aitu(2) * m3;
-
-    Vector2d aitl1;
-    Vector2d aitu1;
-    Vector2d cup;
-
-    if(aitu(0) > 0){
-        aitl1 << aitl(0), aitl(1);
-        aitu1 << aitu(0), aitu(1);
-        cup << cup1(0), cup1(1);
-    }else{
-        aitl1 << aitl(1), aitl(2);
-        aitu1 << aitu(1), aitu(2);
-        cup << cup1(1), cup1(2);
-    }
-
-    double yl = (cup(0) * aitu1(0) + cup(1) * aitl1(1)) / (aitu1(0) + aitl1(1));
-    double yr = (cup(0) * aitl1(0) + cup(1) * aitu1(1)) / (aitl1(0) + aitu1(1));
-    double y = (yl + yr) * 0.5;
-
-    if(isnan(yl) || isnan(yr))
-        y = 1;
+double SI_IT2_FLC_FM::T2(double sigma, double alpha){
+    double k = 1.0/2 * (1.0 / (alpha + abs(sigma) - alpha * abs(sigma)) + (alpha - 1) / (alpha * abs(sigma) - 1));
+    double y = sigma * k;
     return y;
 }
 
-Vector3d SIT2FLC::beta(double x, Matrix3d& d){
-    int k = 0;
-    Vector3d ait;
-    ait << 0, 0, 0;
-
-    Vector2i y1;
-
-    for(int i = 0; i < 3; ++i){
-        if((x <= d(i, k) && i == 0) || (i == 2 && x >= d(i, k + 2)))
-            ait(i) = 1;
-        else{
-            if(x >= d(i, k) && x <= d(i, k + 1)){
-                y1 << 0, 1;
-                ait(i) = ((x - d(i, k + 1)) / ((d(i, k + 1) - d(i, k)) / (y1(1) - y1(0)))) + y1(1);
-            }else{
-                if(x >= d(i, k + 1) && x <= d(i, k + 2)){
-                    y1 << 1, 0;
-                    ait(i) = ((x - d(i, k + 2)) / ((d(i, k + 2) - d(i, k + 1)) / (y1(1) - y1(0)))) + y1(1);
-                }else
-                    ait(i) = 0;
-            }
-        }
-    }
-
-    return ait;
-}
-
 int main(int argc, char** argv){
-    cout << "[SI_IT2_FLC] SI-T2-FLC position controller is running..." << endl;
+    cout << "[SI_IT2_FLC_FM] SI-IT2-FLC-FM position controller is running..." << endl;
 
-    SIT2FLC* controller = new SIT2FLC(argc, argv);
+    SI_IT2_FLC_FM* controller = new SI_IT2_FLC_FM(argc, argv);
 
     controller->run();
 }

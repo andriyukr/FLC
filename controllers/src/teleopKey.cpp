@@ -2,6 +2,7 @@
 #include <ros/ros.h>
 #include <std_msgs/Int8.h>
 #include <geometry_msgs/Quaternion.h>
+#include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
 #include <signal.h>
 #include <termios.h>
@@ -42,6 +43,7 @@ private:
     ros::Publisher camera_publisher;
     std_msgs::Int8 command;
     geometry_msgs::Quaternion velocity;
+    geometry_msgs::Twist velocity_twist;
     geometry_msgs::Vector3 camera;
 
 public:
@@ -51,6 +53,11 @@ public:
         velocity.y = 0;
         velocity.z = 0;
         velocity.w = 0;
+
+        velocity_twist.linear.x = 0;
+        velocity_twist.linear.y = 0;
+        velocity_twist.linear.z = 0;
+        velocity_twist.angular.z = 0;
 
         command_publisher = node_handle.advertise<std_msgs::Int8>("/uav/command", 1);
         velocity_publisher = node_handle.advertise<geometry_msgs::Quaternion>("/uav/command_velocity_keyboard", 1);
@@ -82,17 +89,17 @@ public:
             case KEYCODE_S:
                 velocity.z = max(-MAX_SPEED, velocity.z - MAX_SPEED);
                 break;
-            case KEYCODE_RIGHT:
-                velocity.x = min(MAX_SPEED, velocity.x + MAX_SPEED);
-                break;
             case KEYCODE_LEFT:
-                velocity.x = max(-MAX_SPEED, velocity.x - MAX_SPEED);
-                break;
-            case KEYCODE_UP:
                 velocity.y = min(MAX_SPEED, velocity.y + MAX_SPEED);
                 break;
-            case KEYCODE_DOWN:
+            case KEYCODE_RIGHT:
                 velocity.y = max(-MAX_SPEED, velocity.y - MAX_SPEED);
+                break;
+            case KEYCODE_UP:
+                velocity.x = min(MAX_SPEED, velocity.x + MAX_SPEED);
+                break;
+            case KEYCODE_DOWN:
+                velocity.x = max(-MAX_SPEED, velocity.x - MAX_SPEED);
                 break;
 
 
@@ -148,9 +155,15 @@ public:
                 command_publisher.publish(command);
                 break;
             }
-            velocity_publisher.publish(velocity);
+            velocity_twist.linear.x = velocity.x;
+            velocity_twist.linear.y = velocity.y;
+            velocity_twist.linear.z = velocity.z;
+            velocity_twist.angular.z = velocity.w;
+            if(command.data != 0 || velocity.x != 0 || velocity.y != 0 || velocity.z != 0 || velocity.w != 0 || c != 0)
+                velocity_publisher.publish(velocity);
             camera_publisher.publish(camera);
             c = 0;
+            command.data = 0;
         }
     }
 };

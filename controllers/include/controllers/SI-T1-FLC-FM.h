@@ -6,7 +6,7 @@
 #include <geometry_msgs/Quaternion.h>
 #include <rosgraph_msgs/Clock.h>
 #include <dynamic_reconfigure/server.h>
-#include <controllers/setSIT2FLCConfig.h>
+#include <controllers/setSIT1FLCConfig.h>
 #include <nav_msgs/Odometry.h>
 #include <Eigen/Dense>
 #include <tf/transform_datatypes.h>
@@ -61,13 +61,12 @@ double alpha_d;
 
 bool new_odometry;
 
-class SIT2FLC{
+class SI_T1_FLC_FM{
         public:
-          SIT2FLC(int, char**);
-          ~SIT2FLC();
+          SI_T1_FLC_FM(int, char**);
+          ~SI_T1_FLC_FM();
           void run();
 
         private:
-          double T2(double x1, double m);
-          Vector3d beta(double x, Matrix3d& d);
+          double T1(double sigma);
 };

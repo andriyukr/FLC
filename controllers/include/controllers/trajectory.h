@@ -18,6 +18,7 @@ using Eigen::Vector4d;
 // Publishers
 ros::Publisher trajectory_publisher;
 ros::Publisher velocity_publisher;
+ros::Publisher pose_publisher;
 
 // Pose
 Vector4d pose_d;
@@ -41,5 +42,5 @@ class Trajectory{
           ~Trajectory();
           void run();
         private:
-          double distance(Vector3d v1, Vector3d v2);
+          double distance(Vector4d v1, Vector4d v2);
 };

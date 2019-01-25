@@ -31,7 +31,7 @@ void dynamicReconfigureCallback(controllers::setDIT2FLCConfig &config, uint32_t 
     k_b = config.k_b;
 
     alpha_p = config.alpha_p;
-    alpha_d = config.alpha_d;
+    alpha_d = 1 - config.alpha_d;
 }
 
 // Constructor
@@ -179,6 +179,37 @@ double DIT2FLC::evalt2(double ep, double ed, double m_p, double m_d){
     output << -1,
               0,
               1;
+
+    /*MatrixXi rules(9, 3);
+    rules << 1, 1, 1,
+             1, 2, 1,
+             1, 3, 2,
+             2, 1, 1,
+             2, 2, 2,
+             2, 3, 3,
+             3, 1, 2,
+             3, 2, 3,
+             3, 3, 3;
+
+    MatrixXd input(12, 4);
+    input << -3.5, -1, 0, 1,
+              -3.5, -1, 0, 1 - m_p,
+              -1, 0, 1, 1,
+              -1, 0, 1, m_p,
+              0, 1, 3.5, 1,
+              0, 1, 3.5, 1 - m_p,
+
+              -3.5, -1, 0, 1,
+              -3.5, -1, 0, 1 - m_d,
+              -1, 0, 1, 1,
+              -1, 0, 1, m_d,
+              0, 1, 3.5, 1,
+              0, 1, 3.5, 1 - m_d;
+
+    MatrixXd output(3, 1);
+    output << -1,
+              0,
+              1;*/
 
     int NofRule = 9;
     int nInput = 2;
@@ -432,9 +463,9 @@ int main(int argc, char** argv){
 
     DIT2FLC* controller = new DIT2FLC(argc, argv);
 
-    /*for(double sigma1 = -1; sigma1 <= 1; sigma1+=0.5)
-        for(double sigma2 = -1; sigma2 <= 1; sigma2+=0.5)
-            cout << "[DI_IT2_FLC_FM] phi(" << sigma1 << ", " << sigma2 << ") = " << controller->evalt2(sigma1, sigma2, 1, 1) << endl;*/
+    for(double sigma1 = -2; sigma1 <= 2; sigma1+=1)
+        for(double sigma2 = -2; sigma2 <= 2; sigma2+=1)
+            cout << "[DI_IT2_FLC] phi(" << sigma1 << ", " << sigma2 << ") = " << controller->evalt2(sigma1, sigma2, 1, 1) << endl;
 
     controller->run();
 }

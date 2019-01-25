@@ -5,9 +5,11 @@
 #include <rosgraph_msgs/Clock.h>
 #include <dynamic_reconfigure/server.h>
 #include <controllers/setPIDConfig.h>
+#include <controllers/setPIDsimpleConfig.h>
 #include <nav_msgs/Odometry.h>
 #include <Eigen/Dense>
 #include <tf/transform_datatypes.h>
+#include <tensorflow/c/c_api.h>
 
 using namespace geometry_msgs;
 using namespace std;
@@ -26,6 +28,7 @@ ros::Publisher velocity_publisher;
 
 // Actual state
 Vector4d pose;
+Vector3d orientation;
 Vector4d velocity;
 Vector4d pose_d;
 Vector4d velocity_d;
@@ -36,9 +39,13 @@ Vector4d error_i;
 Vector4d error_d;
 
 // Gains
-double k_p;
-double k_i;
-double k_d;
+double k_p_xy;
+double k_i_xy;
+double k_d_xy;
+double k_p_z;
+double k_i_z;
+double k_d_z;
+double k_p_yaw;
 
 bool new_odometry;
 

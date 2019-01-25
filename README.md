@@ -15,5 +15,5 @@ number={},
 pages={1-6},
 doi={10.1109/FUZZ-IEEE.2017.8015485},
 ISSN={1558-4739},
-month={July},}
+month={July}}
 ```

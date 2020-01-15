@@ -1,4 +1,4 @@
-# Fuzzy Logic Controllers for ROS
+# ROS Package for Fuzzy Logic Controllers
 
 This is a repository for ROS package containing different fuzzy logic controllers for controlling unmanned aerial vehicles.
 
